@@ -1,7 +1,7 @@
 import SSEConnectHandler from './sse-connect-handler';
 import { MCPMessage } from './sse-message-handler';
 import toolService from '../tools/tool-service';  
-
+import { SSEServer } from '../../sse-server';
 /**
  * 会话状态接口
  */
@@ -17,10 +17,12 @@ interface SessionState {
  * 负责处理不同类型的MCP方法调用
  */
 class MCPMessageProcessor {
+    private sseServer: SSEServer;
     private sseConnectHandler: SSEConnectHandler;
     private sessionStates: Map<string, SessionState> = new Map();
 
-    constructor(sseConnectHandler: SSEConnectHandler) {
+    constructor(sseServer: SSEServer, sseConnectHandler: SSEConnectHandler) {
+        this.sseServer = sseServer;
         this.sseConnectHandler = sseConnectHandler;
     }
 
@@ -82,7 +84,7 @@ class MCPMessageProcessor {
                 protocolVersion
             };
             this.sessionStates.set(sessionId, sessionState);
-
+            const serverInfo = this.sseServer.getServerInfo();
             // 返回服务器能力
             const response: MCPMessage = {
                 jsonrpc: "2.0",
@@ -103,8 +105,9 @@ class MCPMessageProcessor {
                         }
                     },
                     serverInfo: {
-                        name: "tapd-mcp-sse",
-                        version: "1.0.0"
+                        name: serverInfo.name,
+                        version: serverInfo.version,
+                        description: serverInfo.description
                     }
                 }
             };

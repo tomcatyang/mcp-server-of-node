@@ -51,6 +51,16 @@ async function startMCPMode(args: string[]): Promise<void> {
     }
 }
 
+function getArgs(args: string[], argsIndex: number): string | null {
+    if (argsIndex !== -1 && args[argsIndex + 1]) {
+        const value = args[argsIndex + 1];
+        if (value) {
+            return value;
+        }
+    }
+    return null;
+}
+
 
 /**
  * 启动SSE独立服务器模式
@@ -62,8 +72,9 @@ async function startSSEMode(args: string[]): Promise<void> {
     // 解析端口参数
     let port = 3000;
     const portIndex = args.findIndex(arg => arg === '--port' || arg === '-p');
-    if (portIndex !== -1 && args[portIndex + 1]) {
-        const parsedPort = parseInt(args[portIndex + 1], 10);
+    const portValue = getArgs(args, portIndex);
+    if (portValue) {
+        const parsedPort = parseInt(portValue, 10);
         if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort < 65536) {
             port = parsedPort;
         } else {
@@ -71,7 +82,12 @@ async function startSSEMode(args: string[]): Promise<void> {
         }
     }
 
-    const sseServer = new SSEServer(port);
+    // 从环境变量获取参数
+    const name = process.env.SSE_SERVER_NAME || 'mcp-sse';
+    const version = process.env.SSE_SERVER_VERSION || '1.0.0';
+    const description = process.env.SSE_SERVER_DESCRIPTION || 'MCP Server of Node';
+
+    const sseServer = new SSEServer({name, port, version, description});
 
     // 设置优雅关闭
     setupGracefulShutdown(() => {
@@ -185,9 +201,15 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 if (require.main === module) {
     // 添加工具
     toolService.addTools(sampleTools);
+
+    // 设置环境变量
+    process.env.SSE_SERVER_NAME = 'mcp-server-of-node';
+    process.env.SSE_SERVER_VERSION = '1.0.0';
+    process.env.SSE_SERVER_DESCRIPTION = 'MCP Server of Node';
+
     // 启动服务器
     main().catch((error) => {
         console.error('❌ 启动失败:', error);
         process.exit(1);
     });
-} 
+}

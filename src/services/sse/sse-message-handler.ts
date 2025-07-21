@@ -23,7 +23,7 @@ class SSEMessageHandler {
     constructor(sseServer: SSEServer, sseConnectHandler: SSEConnectHandler) {
         this.sseServer = sseServer;
         this.sseConnectHandler = sseConnectHandler;
-        this.mcpProcessor = new MCPMessageProcessor(sseConnectHandler);
+        this.mcpProcessor = new MCPMessageProcessor(sseServer, sseConnectHandler);
     }
 
     /**
@@ -101,7 +101,7 @@ class SSEMessageHandler {
             
             if (response) {
                 // 有响应的消息（如initialize），直接返回HTTP响应
-                // res.json(response);
+                res.json(response);
                 
                 // 同时通过SSE发送给客户端
                 this.sseConnectHandler.sendEventToSession(sessionId, 'message', response);

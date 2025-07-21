@@ -242,7 +242,11 @@ class SSESessionManager {
         const activeSessions = this.getActiveSessions();
         if (activeSessions.length > 0) {
             this.broadcast(this.HEARTBEAT_EVENT, { timestamp: Date.now() }, (sessionId, result) => {
-                // console.log(`💓 发送心跳到会话: ${sessionId} ${result ? '成功' : '失败'}`);
+                if (result) {
+                    // console.log(`💓 发送心跳到会话: ${sessionId} 成功`);
+                } else {
+                    console.warn(`💓 发送心跳到会话: ${sessionId} 失败`);
+                }
             });
         }
     }

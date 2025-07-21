@@ -24,3 +24,10 @@ export type ToolResult = {
         other?: string;
     }[];
 }
+
+export type ServerInfo = {
+    name: string;
+    port: number;
+    version: string;
+    description: string;
+}

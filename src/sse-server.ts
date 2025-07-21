@@ -4,19 +4,22 @@ import SSEConnectHandler from './services/sse/sse-connect-handler';
 import SSEMessageHandler from './services/sse/sse-message-handler';
 import SSEManager from './services/sse/sse-manager';
 import { ClientsApiRoutes } from './services/sse/api/clients-api-routes';
+import path from 'path';
+import fs from 'fs';
+import { ServerInfo } from './services/tools/tool-type';
 
 export class SSEServer {
+    private serverInfo: ServerInfo;
     private app: express.Application;
-    private port: number;
     private server: any;
     private sseConnectHandler: SSEConnectHandler;
     private sseMessageHandler: SSEMessageHandler;
     private sseManager: SSEManager;
     private clientsApiRoutes: ClientsApiRoutes;
 
-    constructor(port: number = 3000) {
+    constructor({name, port = 3000, version = '1.0.0', description = 'MCP Server of Node'}: ServerInfo) {
         this.app = express();
-        this.port = port;
+        this.serverInfo = {name, port, version, description};
         this.setupMiddleware();
         this.sseConnectHandler = new SSEConnectHandler(this);
         this.sseMessageHandler = new SSEMessageHandler(this, this.sseConnectHandler);
@@ -42,7 +45,27 @@ export class SSEServer {
         this.app.use(express.json());
 
         // 静态文件服务（如果需要提供测试页面）
-        this.app.use(express.static('public'));
+
+        const possiblePaths = [
+            // 本地依赖路径
+            path.join(process.cwd(), '..', 'mcp-server-of-node', 'public'),
+            path.join(process.cwd(), '..', 'mcp-server-of-node', 'dist', 'public'),
+            
+            // node_modules路径  
+            path.join(process.cwd(), 'node_modules', 'mcp-server-of-node', 'public'),
+            path.join(process.cwd(), 'node_modules', 'mcp-server-of-node', 'dist', 'public'),
+        ];
+        console.log(`🔍 可能的静态文件路径: ${possiblePaths}`);
+
+        for (const publicPath of possiblePaths) {
+            if (fs.existsSync(publicPath)) {
+                console.log(`🔍 找到静态文件路径: ${publicPath}`);
+                this.app.use(express.static(publicPath));
+                break;
+            }else{
+                console.log(`🔍 未找到静态文件路径: ${publicPath}`);
+            }
+        }
     }
 
     private setupRoutes() {
@@ -115,18 +138,26 @@ export class SSEServer {
                 status: serverStats
             });
         });
+
+        // 处理所有请求
+        this.app.get('*', (req: Request, res: Response) => {
+            console.log(`🔍 处理所有请求: ${req.url}`);
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        });
     }
 
     public async start() {
         return new Promise<void>((resolve, reject) => {
             try {
-                this.server = this.app.listen(this.port, () => {
-                    console.log(`🌐 SSE服务器在端口 ${this.port} 上启动`);
-                    console.log(`📡 SSE连接端点: http://localhost:${this.port}/sse`);
-                    console.log(`💬 消息端点: http://localhost:${this.port}/messages`);
-                    console.log(`👥 客户端API: http://localhost:${this.port}/api/clients`);
-                    console.log(`📊 API文档: http://localhost:${this.port}/api/docs`);
-                    console.log(`🔍 健康检查: http://localhost:${this.port}/health`);
+                const port = this.serverInfo.port;
+                this.server = this.app.listen(port, () => {
+                    console.log(`🌐 SSE服务器在端口 ${port} 上启动`);
+                    console.log(`📡 SSE状态监控: http://localhost:${port}/index.html`);
+                    console.log(`📡 SSE连接端点: http://localhost:${port}/sse`);
+                    console.log(`💬 消息端点: http://localhost:${port}/messages`);
+                    console.log(`👥 客户端API: http://localhost:${port}/api/clients`);
+                    console.log(`📊 API文档: http://localhost:${port}/api/docs`);
+                    console.log(`🔍 健康检查: http://localhost:${port}/health`);
                     console.log(`🚀 MCP over SSE 服务已就绪`);
                     resolve();
                 });
@@ -157,5 +188,9 @@ export class SSEServer {
      */
     public getClientsApiRoutes(): ClientsApiRoutes {
         return this.clientsApiRoutes;
+    }
+
+    public getServerInfo(): ServerInfo {
+        return this.serverInfo;
     }
 } 

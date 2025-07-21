@@ -17,6 +17,12 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 if (require.main === module) {
     // 添加工具
     toolService.addTools(sampleTools);
+
+
+    // 设置环境变量
+    process.env.SSE_SERVER_NAME = 'mcp-server-of-node-sample';
+    process.env.SSE_SERVER_VERSION = '1.0.0';
+    process.env.SSE_SERVER_DESCRIPTION = 'MCP Server of Node Sample';
     // 启动服务器
     main().catch((error) => {
         console.error('❌ 启动失败:', error);
