@@ -81,12 +81,19 @@ async function startSSEMode(args: string[]): Promise<void> {
             console.error('❌ 无效的端口号，使用默认端口 3000');
         }
     }
-
     // 从环境变量获取参数
-    const name = process.env.SSE_SERVER_NAME || 'mcp-sse';
-    const version = process.env.SSE_SERVER_VERSION || '1.0.0';
+    const name = process.env.SSE_SERVER_NAME || 'mcp-server-of-node';
+    if(!process.env.SSE_SERVER_NAME){
+        console.error('❌ 未设置SSE_SERVER_NAME环境变量, 使用默认值: mcp-server-of-node');
+    }
+    const version = process.env.SSE_SERVER_VERSION || '1.1.3';
+    if(!process.env.SSE_SERVER_VERSION){
+        console.error('❌ 未设置SSE_SERVER_VERSION环境变量, 使用默认值: 1.1.3');
+    }
     const description = process.env.SSE_SERVER_DESCRIPTION || 'MCP Server of Node';
-
+    if(!process.env.SSE_SERVER_DESCRIPTION){
+        console.error('❌ 未设置SSE_SERVER_DESCRIPTION环境变量, 使用默认值: MCP Server of Node');
+    }
     const sseServer = new SSEServer({name, port, version, description});
 
     // 设置优雅关闭
