@@ -1,6 +1,6 @@
 # MCP Server of Node
 
-MCP服务器基础框架 - 支持标准MCP协议和SSE实时通信功能
+MCP服务器基础框架 - 支持标准MCP协议和SSE实时通信功能，通过基础框架，继承开发各种mcp服务功能,扩展使用方法请参考src/smaple目录的例子
 
 ## 功能特性
 
@@ -18,6 +18,21 @@ npm install mcp-server-of-node
 ```
 
 ## 使用方法
+
+### 全局安装测试
+``` javascript
+npm install -g mcp-server-of-node
+
+// mcp服务，可在cursor等支持mcp的客户端配置command模式
+npx mcp-server-of-node --mcp
+
+// sse mcp服务，可在cursor等支持mcp的客户端配置http sse模式
+npx mcp-server-of-node --sse //启动http服务，默认端口3000，可--port指定端口
+
+// 详细命令可以通过命令查询
+npx mcp-server-of-node --help
+```
+
 
 ### 基本用法
 
