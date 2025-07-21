@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAPD MCP SSE 管理页面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .logs {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            align-items: center;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button.primary {
+            background-color: #007bff;
+            color: white;
+        }
+        button.danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        button.success {
+            background-color: #28a745;
+            color: white;
+        }
+        button.secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        button.small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        input, textarea {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .message-form {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: 1fr 1fr auto;
+            align-items: end;
+        }
+        .info {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #495057;
+            margin-top: 0;
+        }
+        .clients-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .clients-table th,
+        .clients-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .clients-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .clients-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .badge.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .badge.danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .clients-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 客户端列表新样式 */
+        .client-card {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background: white;
+        }
+        .client-header {
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .client-header:hover {
+            background: #e9ecef;
+        }
+        .client-info {
+            flex: 1;
+        }
+        .client-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .client-name {
+            font-weight: 600;
+            color: #495057;
+        }
+        .client-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .expand-icon {
+            transform: rotate(0deg);
+            transition: transform 0.2s ease;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+        .client-details {
+            display: none;
+            padding: 15px;
+            border-top: 1px solid #dee2e6;
+            background: #fafafa;
+        }
+        .client-details.expanded {
+            display: block;
+        }
+        .client-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .meta-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .meta-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        .meta-value {
+            color: #495057;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        /* 消息交互区域 */
+        .message-interaction {
+            margin-top: 15px;
+            border-top: 2px solid #e9ecef;
+            padding-top: 15px;
+        }
+        .message-input-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .message-input-area input {
+            flex: 0 0 120px;
+            font-size: 12px;
+        }
+        .message-input-area textarea {
+            flex: 1;
+            font-size: 12px;
+            min-height: 60px;
+            resize: vertical;
+        }
+        .message-input-area button {
+            flex: 0 0 80px;
+            align-self: flex-end;
+        }
+        .message-history {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+        }
+        .message-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 12px;
+        }
+        .message-item:last-child {
+            border-bottom: none;
+        }
+        .message-item.sent {
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+        .message-item.received {
+            background: #f3e5f5;
+            border-left: 3px solid #9c27b0;
+        }
+        .message-item.error {
+            background: #ffebee;
+            border-left: 3px solid #f44336;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .message-time {
+            color: #6c757d;
+            font-size: 10px;
+        }
+        .message-type {
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .message-content {
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.05);
+            padding: 4px 6px;
+            border-radius: 2px;
+            word-break: break-all;
+        }
+        .no-messages {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌐 TAPD MCP SSE 管理页面</h1>
+    
+    <!-- 统计卡片 -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="totalClients">0</div>
+            <div class="stat-label">总连接数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="mcpClients">0</div>
+            <div class="stat-label">MCP已初始化</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="uptime">0</div>
+            <div class="stat-label">服务运行时间</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- 左侧：连接测试 -->
+        <div>
+            <div class="container">
+                <h2>连接测试</h2>
+                <div id="status" class="status disconnected">❌ 未连接</div>
+                <div class="controls">
+                    <button id="connectBtn" class="primary">连接SSE</button>
+                    <button id="disconnectBtn" class="danger" disabled>断开连接</button>
+                    <button id="clearLogsBtn" class="success">清空日志</button>
+                </div>
+                <div class="info">
+                    <p><strong>会话ID:</strong> <span id="sessionId">-</span></p>
+                    <p><strong>消息端点:</strong> <span id="messageEndpoint">-</span></p>
+                </div>
+            </div>
+
+            <div class="container">
+                <h2>发送消息</h2>
+                <div class="message-form">
+                    <input type="text" id="eventType" placeholder="事件类型" value="message">
+                    <textarea id="messageData" placeholder="消息内容（JSON-RPC 2.0格式）" rows="3">{"jsonrpc": "2.0", "id": 1, "method": "notifications/test", "params": {"message": "Hello from SSE management page!", "timestamp": "auto"}}</textarea>
+                    <button id="sendBtn" class="primary" disabled>发送消息</button>
+                </div>
+                <div class="info">
+                    <p>消息将发送到当前会话的消息端点</p>
+                    <details>
+                        <summary style="cursor: pointer; color: #007bff;">📋 JSON-RPC 2.0 消息示例</summary>
+                        <div style="margin-top: 10px; font-family: 'Courier New', monospace; font-size: 11px;">
+                            <p><strong>工具调用：</strong></p>
+                            <pre style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 5px 0;">{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "tapd_get_story", "arguments": {"story_id": "12345"}}}</pre>
+                            
+                            <p><strong>工具列表：</strong></p>
+                            <pre style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 5px 0;">{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}</pre>
+                            
+                            <p><strong>通知消息：</strong></p>
+                            <pre style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 5px 0;">{"jsonrpc": "2.0", "method": "notifications/test", "params": {"message": "Hello World!"}}</pre>
+                            
+                            <p><strong>初始化：</strong></p>
+                            <pre style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin: 5px 0;">{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test-client", "version": "1.0.0"}}}</pre>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <div class="container">
+                <h2>事件日志</h2>
+                <div id="logs" class="logs">等待连接...\n</div>
+            </div>
+        </div>
+
+        <!-- 右侧：客户端管理 -->
+        <div>
+            <div class="container">
+                <div class="clients-header">
+                    <h2>已连接客户端</h2>
+                    <div class="auto-refresh">
+                        <label>
+                            <input type="checkbox" id="autoRefreshChk" checked> 自动刷新
+                        </label>
+                        <button id="refreshClientsBtn" class="secondary">手动刷新</button>
+                    </div>
+                </div>
+                
+                <div id="clientsContainer">
+                    <p class="info">正在加载客户端列表...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let sessionId = null;
+        let messageEndpoint = null;
+        let autoRefreshInterval = null;
+        let serverStartTime = Date.now();
+        let clientMessageHistories = new Map(); // 存储每个客户端的消息历史
+        let messageIdCounter = 1; // JSON-RPC消息ID计数器
+
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const clearLogsBtn = document.getElementById('clearLogsBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const logsDiv = document.getElementById('logs');
+        const sessionIdSpan = document.getElementById('sessionId');
+        const messageEndpointSpan = document.getElementById('messageEndpoint');
+        const eventTypeInput = document.getElementById('eventType');
+        const messageDataInput = document.getElementById('messageData');
+        const clientsContainer = document.getElementById('clientsContainer');
+        const autoRefreshChk = document.getElementById('autoRefreshChk');
+        const refreshClientsBtn = document.getElementById('refreshClientsBtn');
+
+        // 统计元素
+        const totalClientsSpan = document.getElementById('totalClients');
+        const mcpClientsSpan = document.getElementById('mcpClients');
+        const uptimeSpan = document.getElementById('uptime');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.textContent += `[${timestamp}] ${message}\n`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateStatus(status, message) {
+            statusDiv.className = `status ${status}`;
+            statusDiv.textContent = message;
+        }
+
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            
+            if (hours > 0) {
+                return `${hours}:${(minutes % 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+            } else if (minutes > 0) {
+                return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`;
+            } else {
+                return `${seconds}s`;
+            }
+        }
+
+        function updateUptime() {
+            const uptime = Date.now() - serverStartTime;
+            uptimeSpan.textContent = formatDuration(uptime);
+        }
+
+        function addMessageToHistory(clientSessionId, type, event, data, success = true) {
+            if (!clientMessageHistories.has(clientSessionId)) {
+                clientMessageHistories.set(clientSessionId, []);
+            }
+            
+            const history = clientMessageHistories.get(clientSessionId);
+            const message = {
+                id: Date.now() + Math.random(),
+                type: type, // 'sent', 'received', 'error'
+                event: event,
+                data: data,
+                timestamp: Date.now(),
+                success: success
+            };
+            
+            history.unshift(message); // 最新消息在前
+            
+            // 限制历史记录数量
+            if (history.length > 50) {
+                history.splice(50);
+            }
+            
+            clientMessageHistories.set(clientSessionId, history);
+        }
+
+        function renderMessageHistory(clientSessionId) {
+            const history = clientMessageHistories.get(clientSessionId) || [];
+            
+            if (history.length === 0) {
+                return '<div class="no-messages">暂无消息记录</div>';
+            }
+            
+            return history.map(msg => {
+                const time = new Date(msg.timestamp).toLocaleTimeString();
+                const typeClass = msg.success ? msg.type : 'error';
+                const typeText = msg.type === 'sent' ? '发送' : msg.type === 'received' ? '接收' : '错误';
+                
+                return `
+                    <div class="message-item ${typeClass}">
+                        <div class="message-header">
+                            <span class="message-type">${typeText} - ${msg.event}</span>
+                            <span class="message-time">${time}</span>
+                        </div>
+                        <div class="message-content">${JSON.stringify(msg.data, null, 2)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function sendMessageToClient(clientSessionId, event, data) {
+            try {
+                const response = await fetch(`/api/clients/${clientSessionId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        event: event,
+                        data: data
+                    })
+                });
+
+                const result = await response.json();
+                addMessageToHistory(clientSessionId, 'sent', event, data, result.success);
+                
+                // 更新消息历史显示
+                updateClientMessageHistory(clientSessionId);
+                
+                return result;
+            } catch (error) {
+                addMessageToHistory(clientSessionId, 'sent', event, data, false);
+                updateClientMessageHistory(clientSessionId);
+                throw error;
+            }
+        }
+
+        function updateClientMessageHistory(clientSessionId) {
+            const historyContainer = document.getElementById(`history-${clientSessionId}`);
+            if (historyContainer) {
+                historyContainer.innerHTML = renderMessageHistory(clientSessionId);
+            }
+        }
+
+        async function disconnectClientSession(clientSessionId) {
+            if (!confirm(`确定要断开客户端 ${clientSessionId.substring(0, 8)}... 的连接吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/clients/${clientSessionId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    log(`客户端 ${clientSessionId} 连接已断开`);
+                    setTimeout(loadClientsList, 1000);
+                } else {
+                    log(`断开客户端连接失败: ${result.message}`);
+                }
+            } catch (error) {
+                log(`断开客户端连接出错: ${error.message}`);
+            }
+        }
+
+        function toggleClientDetails(clientSessionId) {
+            const details = document.getElementById(`details-${clientSessionId}`);
+            const icon = document.getElementById(`icon-${clientSessionId}`);
+            
+            if (details.classList.contains('expanded')) {
+                details.classList.remove('expanded');
+                icon.classList.remove('expanded');
+            } else {
+                details.classList.add('expanded');
+                icon.classList.add('expanded');
+            }
+        }
+
+        async function loadClientsList() {
+            try {
+                const response = await fetch('/api/clients');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateClientsDisplay(data.clients, data.summary);
+                    updateStats(data.summary);
+                } else {
+                    clientsContainer.innerHTML = '<p class="info">❌ 加载客户端列表失败</p>';
+                }
+            } catch (error) {
+                console.error('加载客户端列表失败:', error);
+                clientsContainer.innerHTML = '<p class="info">❌ 网络错误，无法加载客户端列表</p>';
+            }
+        }
+
+        function updateStats(summary) {
+            totalClientsSpan.textContent = summary.total;
+            mcpClientsSpan.textContent = summary.mcpInitialized;
+        }
+
+        function updateClientsDisplay(clients, summary) {
+            if (clients.length === 0) {
+                clientsContainer.innerHTML = '<p class="info">🔍 暂无已连接的客户端</p>';
+                return;
+            }
+
+            let html = '';
+
+            clients.forEach(client => {
+                const sessionIdShort = client.sessionId.substring(0, 8) + '...';
+                const mcpStatus = client.mcp.initialized ? 
+                    '<span class="badge success">已初始化</span>' : 
+                    '<span class="badge warning">未初始化</span>';
+                
+                const clientInfo = client.mcp.clientInfo ? 
+                    `${client.mcp.clientInfo.name} v${client.mcp.clientInfo.version}` : 
+                    '未知客户端';
+                
+                const connectedDuration = formatDuration(client.connectedDuration);
+                const lastActivity = new Date(client.lastActivity).toLocaleTimeString();
+                const createdAt = new Date(client.createdAt).toLocaleString();
+
+                html += `
+                    <div class="client-card">
+                        <div class="client-header" onclick="toggleClientDetails('${client.sessionId}')">
+                            <div class="client-info">
+                                <div class="client-name">${clientInfo} ${mcpStatus}</div>
+                                <div class="client-id">ID: ${sessionIdShort} | 连接时长: ${connectedDuration}</div>
+                            </div>
+                            <div class="client-actions">
+                                <button class="danger small" onclick="event.stopPropagation(); disconnectClientSession('${client.sessionId}')">断开</button>
+                                <span class="expand-icon" id="icon-${client.sessionId}">▶</span>
+                            </div>
+                        </div>
+                        <div class="client-details" id="details-${client.sessionId}">
+                            <div class="client-meta">
+                                <div class="meta-item">
+                                    <span class="meta-label">完整会话ID:</span>
+                                    <span class="meta-value">${client.sessionId}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">创建时间:</span>
+                                    <span class="meta-value">${createdAt}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">最后活动:</span>
+                                    <span class="meta-value">${lastActivity}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">协议版本:</span>
+                                    <span class="meta-value">${client.mcp.protocolVersion || '未知'}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="message-interaction">
+                                <h4 style="margin: 0 0 10px 0; color: #495057;">💬 消息交互</h4>
+                                <div class="message-input-area">
+                                    <input type="text" id="event-${client.sessionId}" placeholder="事件类型" value="message">
+                                    <textarea id="data-${client.sessionId}" placeholder="消息内容 (JSON-RPC 2.0)" rows="2">{"jsonrpc": "2.0", "id": ${Date.now()}, "method": "notifications/admin_message", "params": {"type": "admin_message", "content": "Hello from admin!"}}</textarea>
+                                    <button class="primary small" onclick="sendClientMessage('${client.sessionId}')">发送</button>
+                                </div>
+                                <div class="message-history" id="history-${client.sessionId}">
+                                    ${renderMessageHistory(client.sessionId)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            clientsContainer.innerHTML = html;
+        }
+
+        async function sendClientMessage(clientSessionId) {
+            const eventInput = document.getElementById(`event-${clientSessionId}`);
+            const dataInput = document.getElementById(`data-${clientSessionId}`);
+            
+            const event = eventInput.value.trim() || 'message';
+            let data;
+            
+            try {
+                data = JSON.parse(dataInput.value);
+                
+                // 处理JSON-RPC 2.0格式的特殊字段
+                if (data.jsonrpc === "2.0") {
+                    // 如果没有ID且不是通知消息，自动生成ID
+                    if (!data.hasOwnProperty('id') && data.method && !data.method.startsWith('notifications/')) {
+                        data.id = messageIdCounter++;
+                    }
+                    
+                    // 处理params中的时间戳
+                    if (data.params && data.params.timestamp === 'auto') {
+                        data.params.timestamp = Date.now();
+                    }
+                } else {
+                    // 非JSON-RPC格式的消息，处理根级别的时间戳
+                    if (data.timestamp === 'auto') {
+                        data.timestamp = Date.now();
+                    }
+                }
+            } catch (e) {
+                alert('消息内容必须是有效的JSON格式');
+                return;
+            }
+            
+            try {
+                const result = await sendMessageToClient(clientSessionId, event, data);
+                if (result.success) {
+                    log(`消息已发送到客户端 ${clientSessionId.substring(0, 8)}...`);
+                } else {
+                    log(`发送消息失败: ${result.message}`);
+                }
+            } catch (error) {
+                log(`发送消息出错: ${error.message}`);
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            if (autoRefreshChk.checked) {
+                autoRefreshInterval = setInterval(() => {
+                    loadClientsList();
+                }, 3000); // 每3秒刷新一次
+            }
+        }
+
+        function connect() {
+            updateStatus('connecting', '🔄 正在连接...');
+            log('开始连接SSE服务器...');
+
+            eventSource = new EventSource('/sse');
+
+            eventSource.onopen = function(event) {
+                updateStatus('connected', '✅ 已连接');
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                log('SSE连接已建立');
+            };
+
+            eventSource.onerror = function(event) {
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    updateStatus('disconnected', '❌ 连接已关闭');
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                    log('SSE连接已关闭');
+                } else {
+                    updateStatus('disconnected', '❌ 连接错误');
+                    log('SSE连接错误: ' + JSON.stringify(event));
+                }
+            };
+
+            // 监听endpoint事件
+            eventSource.addEventListener('endpoint', function(event) {
+                messageEndpoint = event.data;
+                messageEndpointSpan.textContent = messageEndpoint;
+                
+                const urlParams = new URLSearchParams(messageEndpoint.split('?')[1]);
+                sessionId = urlParams.get('session_id');
+                sessionIdSpan.textContent = sessionId;
+                sendBtn.disabled = false;
+                
+                log(`收到endpoint事件: ${messageEndpoint}`);
+                log(`会话ID: ${sessionId}`);
+                
+                // 刷新客户端列表
+                setTimeout(loadClientsList, 1000);
+            });
+
+            eventSource.addEventListener('welcome', function(event) {
+                const data = JSON.parse(event.data);
+                log(`收到欢迎消息: ${data.message}`);
+            });
+
+            eventSource.addEventListener('heartbeat', function(event) {
+                const data = JSON.parse(event.data);
+                log(`收到心跳: ${new Date(data.timestamp).toLocaleTimeString()}`);
+            });
+
+            eventSource.addEventListener('message', function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`收到消息事件: ${JSON.stringify(data, null, 2)}`);
+                    
+                    // 如果是当前连接的会话，添加到消息历史
+                    if (sessionId) {
+                        addMessageToHistory(sessionId, 'received', 'message', data);
+                        updateClientMessageHistory(sessionId);
+                    }
+                } catch (e) {
+                    log(`收到消息事件: ${event.data}`);
+                }
+            });
+
+            eventSource.addEventListener('test', function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`收到测试事件: ${JSON.stringify(data, null, 2)}`);
+                    
+                    // 如果是当前连接的会话，添加到消息历史
+                    if (sessionId) {
+                        addMessageToHistory(sessionId, 'received', 'test', data);
+                        updateClientMessageHistory(sessionId);
+                    }
+                } catch (e) {
+                    log(`收到测试事件: ${event.data}`);
+                }
+            });
+
+            eventSource.onmessage = function(event) {
+                log(`收到默认消息: ${event.data}`);
+            };
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            updateStatus('disconnected', '❌ 已断开连接');
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            sendBtn.disabled = true;
+            sessionId = null;
+            messageEndpoint = null;
+            sessionIdSpan.textContent = '-';
+            messageEndpointSpan.textContent = '-';
+            log('手动断开SSE连接');
+            
+            // 刷新客户端列表
+            setTimeout(loadClientsList, 1000);
+        }
+
+        async function sendMessage() {
+            if (!sessionId || !messageEndpoint) {
+                log('错误: 没有有效的会话ID或消息端点');
+                return;
+            }
+
+            const eventType = eventTypeInput.value.trim() || 'message';
+            let messageData;
+            
+            try {
+                messageData = JSON.parse(messageDataInput.value);
+                
+                // 处理JSON-RPC 2.0格式的特殊字段
+                if (messageData.jsonrpc === "2.0") {
+                    // 如果没有ID且不是通知消息，自动生成ID
+                    if (!messageData.hasOwnProperty('id') && messageData.method && !messageData.method.startsWith('notifications/')) {
+                        messageData.id = messageIdCounter++;
+                    }
+                    
+                    // 处理params中的时间戳
+                    if (messageData.params && messageData.params.timestamp === 'auto') {
+                        messageData.params.timestamp = Date.now();
+                    }
+                } else {
+                    // 非JSON-RPC格式的消息，处理根级别的时间戳
+                    if (messageData.timestamp === 'auto') {
+                        messageData.timestamp = Date.now();
+                    }
+                }
+            } catch (e) {
+                log('错误: 消息数据不是有效的JSON格式');
+                return;
+            }
+
+            try {
+                const response = await fetch(messageEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(messageData)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    log(`消息发送成功: ${JSON.stringify(result)}`);
+                    addMessageToHistory(sessionId, 'sent', eventType, messageData);
+                    updateClientMessageHistory(sessionId);
+                } else {
+                    log(`消息发送失败: ${JSON.stringify(result)}`);
+                }
+            } catch (error) {
+                log(`消息发送错误: ${error.message}`);
+            }
+        }
+
+        function clearLogs() {
+            logsDiv.textContent = '';
+        }
+
+        // 事件监听器
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        clearLogsBtn.addEventListener('click', clearLogs);
+        sendBtn.addEventListener('click', sendMessage);
+        refreshClientsBtn.addEventListener('click', loadClientsList);
+        autoRefreshChk.addEventListener('change', startAutoRefresh);
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('管理页面已加载，点击"连接SSE"开始测试');
+            loadClientsList();
+            startAutoRefresh();
+            
+            // 更新运行时间
+            setInterval(updateUptime, 1000);
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,58 @@
+{
+  "name": "mcp-server-of-node",
+  "version": "1.0.0",
+  "description": "mcp server framework of node",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "bin": {
+    "mcp-server-of-node": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx sample/sample-main.ts",
+    "dev:sse": "tsx sample/sample-main.ts sse",
+    "dev:sse:port": "tsx sample/sample-main.ts sse --port",
+    "start": "node dist/index.js",
+    "start:sse": "node dist/index.js sse",
+    "start:sse:port": "node dist/index.js sse --port",
+    "test-sse": "npm run build && node dist/index.js sse",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "claude",
+    "sse",
+    "server-sent-events",
+    "real-time"
+  ],
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "public/**/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "@types/uuid": "^10.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.35",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.10.7",
+    "@types/node-fetch": "^2.6.11",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
