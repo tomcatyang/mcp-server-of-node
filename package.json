@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-of-node",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "MCP服务器基础框架 - 支持标准MCP协议和SSE实时通信功能",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,13 +24,12 @@
     "start": "node dist/index.js",
     "start:sse": "node dist/index.js sse",
     "start:sse:port": "node dist/index.js sse --port",
-
-    "sample": "tsx src/sample/sample-index.ts mcp",
-    "sample:sse": "tsx src/sample/sample-index.ts sse",
     "test-sse": "npm run build && node dist/index.js sse",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sample": "tsx src/sample/sample-index.ts mcp",
+    "sample:sse": "tsx src/sample/sample-index.ts sse"
   },
   "keywords": [
     "mcp",
@@ -49,7 +48,7 @@
     "dist/**/*",
     "README.md",
     "public/**/*",
-    "sample/**/*"
+    "src/**/*"
   ],
   "engines": {
     "node": ">=18.0.0"

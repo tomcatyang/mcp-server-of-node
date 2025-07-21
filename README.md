@@ -37,6 +37,87 @@ const sseServer = new SSEServer(3000);
 await sseServer.start();
 ```
 
+### 工具服务管理
+
+```javascript
+import { toolService, ToolArgs, ToolResult } from 'mcp-server-of-node';
+
+// 创建自定义工具
+const myTool: ToolArgs = {
+    name: 'my_tool',
+    title: '我的工具',
+    description: '这是一个示例工具',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            message: { type: 'string', description: '输入消息' }
+        },
+        required: ['message']
+    },
+    handle: async (args: any): Promise<ToolResult> => {
+        return {
+            content: [{
+                type: "text",
+                text: `你输入的消息是: ${args.message}`
+            }],
+            toolName: 'my_tool',
+            toolArgs: args,
+            isError: false
+        };
+    }
+};
+
+// 添加工具到服务
+toolService.addTool(myTool);
+
+// 获取所有工具
+const allTools = toolService.getToolList();
+console.log('已注册的工具:', allTools.map(t => t.name));
+```
+
+### 完整示例
+
+```javascript
+import { MCPServer, SSEServer, toolService, ToolArgs } from 'mcp-server-of-node';
+
+// 创建工具
+const weatherTool: ToolArgs = {
+    name: 'get_weather',
+    title: '天气查询',
+    description: '查询指定城市的天气',
+    inputSchema: {
+        type: 'object',
+        properties: {
+            city: { type: 'string', description: '城市名称' }
+        },
+        required: ['city']
+    },
+    handle: async (args) => {
+        // 模拟天气查询
+        return {
+            content: [{
+                type: "text",
+                text: `${args.city}今天天气晴朗，温度25°C`
+            }],
+            toolName: 'get_weather',
+            toolArgs: args,
+            isError: false
+        };
+    }
+};
+
+// 注册工具
+toolService.addTool(weatherTool);
+
+// 启动MCP服务器
+const mcpServer = new MCPServer();
+await mcpServer.start();
+
+// 或者启动SSE服务器
+// const sseServer = new SSEServer(3000);
+// await sseServer.start();
+```
+
 ## MCP工具开发指南
 
 ### 1. 工具类型定义
@@ -143,10 +224,7 @@ export default [weatherTool];
 ### 3. 注册和使用工具
 
 ```typescript
-import { MCPServer } from 'mcp-server-of-node';
-import toolService from 'mcp-server-of-node/services/tools/tool-service';
-import weatherTools from './weather-tools';
-import indexModule from '../index';
+import indexModule, { MCPServer,toolService } from 'mcp-server-of-node';
 
 const { main, showHelp} = indexModule;
 

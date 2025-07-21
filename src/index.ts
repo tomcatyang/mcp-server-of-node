@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+// CLI模式的导入
 import { MCPServer } from './mcp-server';
 import { SSEServer } from './sse-server';
 import toolService from './services/tools/tool-service';
@@ -162,7 +162,14 @@ SSE模式选项:
 `);
 }
 
+// 核心模块导出 - 供其他项目使用
+export { MCPServer } from './mcp-server';
+export { SSEServer } from './sse-server';
+export { default as toolService } from './services/tools/tool-service';
+export * from './services/tools/tool-type';
 
+
+// CLI功能导出
 export default {
     main,
     showHelp
@@ -173,7 +180,6 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     showHelp();
     process.exit(0);
 }
-
 
 // 启动服务器，添加例子工具
 if (require.main === module) {
