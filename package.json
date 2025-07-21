@@ -1,42 +1,67 @@
 {
   "name": "mcp-server-of-node",
-  "version": "1.0.0",
-  "description": "mcp server framework of node",
-  "main": "index.js",
+  "version": "1.0.2",
+  "description": "MCP服务器基础框架 - 支持标准MCP协议和SSE实时通信功能",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "author": "",
   "license": "ISC",
   "bin": {
     "mcp-server-of-node": "dist/index.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx sample/sample-main.ts",
-    "dev:sse": "tsx sample/sample-main.ts sse",
-    "dev:sse:port": "tsx sample/sample-main.ts sse --port",
+    "dev": "tsx src/index.ts mcp",
+    "dev:sse": "tsx src/index.ts sse",
+    "dev:sse:port": "tsx src/index.ts sse --port",
     "start": "node dist/index.js",
     "start:sse": "node dist/index.js sse",
     "start:sse:port": "node dist/index.js sse --port",
+
+    "sample": "tsx src/sample/sample-index.ts mcp",
+    "sample:sse": "tsx src/sample/sample-index.ts sse",
     "test-sse": "npm run build && node dist/index.js sse",
     "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "framework",
+    "server",
     "ai",
     "claude",
     "sse",
     "server-sent-events",
-    "real-time"
+    "real-time",
+    "nodejs",
+    "typescript"
   ],
   "files": [
     "dist/**/*",
     "README.md",
-    "public/**/*"
+    "public/**/*",
+    "sample/**/*"
   ],
   "engines": {
     "node": ">=18.0.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomcatyang/mcp-server-of-node"
+  },
+  "bugs": {
+    "url": "https://github.com/tomcatyang/mcp-server-of-node/issues"
+  },
+  "homepage": "https://github.com/tomcatyang/mcp-server-of-node#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.1",
     "@types/uuid": "^10.0.0",

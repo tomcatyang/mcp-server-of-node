@@ -2,6 +2,8 @@
 
 import { MCPServer } from './mcp-server';
 import { SSEServer } from './sse-server';
+import toolService from './services/tools/tool-service';
+import sampleTools from './sample/sample-tool';
 
 /**
  * MCP Server of Node 主入口
@@ -18,11 +20,14 @@ async function main() {
     if (mode === 'sse' || mode === '--sse') {
         // SSE独立服务器模式
         await startSSEMode(args);
-    } else {
+    } else if (mode === 'mcp' || mode === '--mcp') {
         // MCP服务器模式（支持不同配置）
         await startMCPMode(args);
+    } else {
+        // 默认模式：MCP + SSE管理工具
+        showHelp();
     }
-}
+}   
 
 /**
  * 启动MCP服务器模式
@@ -115,17 +120,16 @@ function setupGracefulShutdown(cleanup: () => void): void {
  */
 function showHelp(): void {
     console.log(`
-TAPD MCP Server
+MCP Server of Node
 
 用法:
-  npx tapd-mcp [选项]                     # 启动MCP服务器模式（默认）
-  npx tapd-mcp sse [选项]                 # 启动SSE独立服务器模式
+  npx mcp-server-of-node                  # 显示此帮助信息（默认）
+  npx mcp-server-of-node mcp              # 启动MCP服务器模式
+  npx mcp-server-of-node sse [选项]       # 启动SSE独立服务器模式
 
-MCP模式选项:
-  --no-sse                    # 完全禁用SSE功能，只提供TAPD工具
-  --auto-sse [--port PORT]    # 自动启动SSE服务器，不提供SSE管理工具
-  --sse-tools-only           # 只提供SSE管理工具，不自动启动
-  (默认)                      # 提供TAPD工具 + SSE管理工具
+模式说明:
+  mcp                         # 启动标准MCP协议服务器，用于与AI客户端通信
+  sse                         # 启动HTTP SSE服务器，提供Web界面和实时推送
 
 SSE模式选项:
   --port, -p <number>        # 指定SSE服务器端口（默认：3000）
@@ -134,24 +138,27 @@ SSE模式选项:
   --help, -h                 # 显示此帮助信息
 
 示例:
-  # 纯TAPD模式（无SSE功能）
-  npx tapd-mcp --no-sse
+  # 显示帮助信息
+  npx mcp-server-of-node
+  npx mcp-server-of-node --help
 
-  # MCP + 自动SSE模式
-  npx tapd-mcp --auto-sse --port 8080
+  # 启动MCP服务器
+  npx mcp-server-of-node mcp
 
-  # MCP + SSE管理工具模式（默认）
-  npx tapd-mcp
+  # 启动SSE服务器（默认端口3000）
+  npx mcp-server-of-node sse
 
-  # SSE独立服务器模式
-  npx tapd-mcp sse
-  npx tapd-mcp sse --port 8080
+  # 启动SSE服务器（指定端口）
+  npx mcp-server-of-node sse --port 8080
+  npx mcp-server-of-node sse -p 8080
 
-模式说明:
-  纯TAPD模式       - 只提供TAPD工具，无SSE功能，最轻量
-  MCP+自动SSE模式  - MCP工具 + 自动启动的SSE服务器，无需手动管理
-  MCP+SSE工具模式  - MCP工具 + SSE管理工具，可通过Claude手动控制SSE
-  SSE独立模式      - 纯HTTP SSE服务器，提供Web界面和实时推送
+工具说明:
+  本框架包含示例工具 'show_weather'，可查询天气信息
+  开发者可参考 src/sample/sample-tool.ts 创建自定义工具
+
+配置说明:
+  MCP模式 - 通过stdio与Claude Desktop等AI客户端通信
+  SSE模式 - 作为HTTP服务器运行，支持Web界面和实时推送
 `);
 }
 
@@ -160,3 +167,21 @@ export default {
     main,
     showHelp
 }
+
+// 检查是否需要显示帮助
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    showHelp();
+    process.exit(0);
+}
+
+
+// 启动服务器，添加例子工具
+if (require.main === module) {
+    // 添加工具
+    toolService.addTools(sampleTools);
+    // 启动服务器
+    main().catch((error) => {
+        console.error('❌ 启动失败:', error);
+        process.exit(1);
+    });
+} 

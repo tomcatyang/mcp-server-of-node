@@ -1,4 +1,4 @@
-import { ToolArgs, ToolResult } from "../src/services/tools/tool-type";
+import { ToolArgs, ToolResult } from "../services/tools/tool-type";
 
 const sampleTools: ToolArgs[] = [
     {
