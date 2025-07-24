@@ -9,6 +9,9 @@ import {
 import McpService from './services/mcp-service';
 import { Log } from './log';
 
+// 设置MCP模式
+Log.setMcpMode(true);
+
 
 export class MCPServer {
     private server: Server;
