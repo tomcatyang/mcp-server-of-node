@@ -237,14 +237,8 @@ export type ToolResult = {
     content: {
         type: string; // text, image, video, audio, file, link, table, list, other
         text?: string;
-        image?: string;
-        video?: string;
-        audio?: string
-        file?: string;
-        link?: string;
-        table?: string;
-        list?: string;
-        other?: string;
+        data?: string; //如果是图片，则data为base64编码的图片数据
+        mimeType?: string; //如果是图片，则mimeType为图片的mime类型
     }[];
 }
 
