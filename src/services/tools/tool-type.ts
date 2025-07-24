@@ -1,9 +1,20 @@
+export type InputSchema = {
+    type: string; // object
+    properties: { // 属性列表
+        [key: string]: {
+            type: string;
+            description: string;
+        };
+    };
+    required: string[]; // 必填字段
+}
+
 export type ToolArgs = {
     name: string;
     title: string;
     description: string;
-    inputSchema: any;
-    handle: (args: any) => Promise<ToolResult>;
+    inputSchema: InputSchema;
+    handle: (args: object) => Promise<ToolResult>; // 工具处理函数
 }
 
 
