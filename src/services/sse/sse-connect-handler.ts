@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { SSEServer } from '../../sse-server';
 import SSESessionManager, { SSESession } from './sse-session-manager';
+import { Log } from '../../log';
 
 export interface SSEClient {
     id: string;
@@ -27,7 +28,7 @@ class SSEConnectHandler {
      */
     public async onClientConnect(req: Request, res: Response): Promise<void> {
         try {
-            console.log('🔌 新的SSE连接请求, client ip', req.ip);
+            Log.info('🔌 新的SSE连接请求, client ip', req.ip);
 
             // 设置SSE响应头，包含UTF-8编码
             res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -48,10 +49,10 @@ class SSEConnectHandler {
             // 发送欢迎消息
             this.sendWelcomeMessage(session);
 
-            console.log(`🌐 SSE连接已建立，会话ID: ${session.id}`);
+            Log.info(`🌐 SSE连接已建立，会话ID: ${session.id}`);
 
         } catch (error) {
-            console.error('❌ 处理SSE连接失败:', error);
+            Log.error('❌ 处理SSE连接失败:', error);
             if (!res.headersSent) {
                 res.status(500).end();
             }
@@ -70,10 +71,10 @@ class SSEConnectHandler {
             const success = this.sessionManager.sendRawDataToSession(session.id, eventString);
             
             if (success) {
-                console.log(`📍 发送endpoint事件: ${messageEndpoint}`);
+                Log.info(`📍 发送endpoint事件: ${messageEndpoint}`);
             }
         } catch (error) {
-            console.error('❌ 发送endpoint事件失败:', error);
+            Log.error('❌ 发送endpoint事件失败:', error);
             this.sessionManager.removeSession(session.id);
         }
     }
@@ -94,10 +95,10 @@ class SSEConnectHandler {
             const success = this.sessionManager.sendToSession(session.id, 'welcome', welcomeData);
             
             if (success) {
-                console.log(`👋 发送欢迎消息到会话: ${session.id}`);
+                Log.info(`👋 发送欢迎消息到会话: ${session.id}`);
             }
         } catch (error) {
-            console.error('❌ 发送欢迎消息失败:', error);
+            Log.error('❌ 发送欢迎消息失败:', error);
             this.sessionManager.removeSession(session.id);
         }
     }
@@ -133,7 +134,7 @@ class SSEConnectHandler {
      * 向指定会话发送事件
      */
     public sendEventToSession(sessionId: string, event: string, data: any): boolean {
-        console.log(`📤 发送事件到会话: ${sessionId}, 事件: ${event}, 数据:`, data);
+        Log.debug(`📤 发送事件到会话: ${sessionId}, 事件: ${event}, 数据:`, data);
         return this.sessionManager.sendToSession(sessionId, event, data);
     }
 
@@ -156,7 +157,7 @@ class SSEConnectHandler {
      */
     public stop(): void {
         this.sessionManager.stop();
-        console.log('🛑 SSE连接处理器已停止');
+        Log.info('🛑 SSE连接处理器已停止');
     }
 }
 

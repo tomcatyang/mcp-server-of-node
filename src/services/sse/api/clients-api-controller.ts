@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 import SSEManager from '../sse-manager';
+import { Log } from '../../../log';
 
 /**
  * 客户端API控制器
- * 负责处理所有与客户端管理相关的API接口
+ * 提供RESTful API来管理SSE客户端连接
  */
-export class ClientsApiController {
+class ClientsApiController {
     private sseManager: SSEManager;
 
     constructor(sseManager: SSEManager) {
@@ -13,15 +14,19 @@ export class ClientsApiController {
     }
 
     /**
-     * 获取所有已连接客户端列表
+     * 获取所有客户端列表
      * GET /api/clients
      */
-    public getClientsList = (req: Request, res: Response): void => {
+    public getClients = async (req: Request, res: Response): Promise<void> => {
         try {
-            const clientsList = this.sseManager.getClientsList();
-            res.json(clientsList);
+            const clients = this.sseManager.getClients();
+            res.json({
+                success: true,
+                data: clients,
+                timestamp: Date.now()
+            });
         } catch (error) {
-            console.error('❌ 获取客户端列表API失败:', error);
+            Log.error('❌ 获取客户端列表API失败:', error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to get clients list',
@@ -34,9 +39,9 @@ export class ClientsApiController {
      * 获取特定客户端信息
      * GET /api/clients/:sessionId
      */
-    public getClientInfo = (req: Request, res: Response): void => {
+    public getClient = async (req: Request, res: Response): Promise<void> => {
         try {
-            const sessionId = req.params.sessionId;
+            const { sessionId } = req.params;
             
             if (!sessionId) {
                 res.status(400).json({
@@ -47,22 +52,24 @@ export class ClientsApiController {
                 return;
             }
 
-            const clientInfo = this.sseManager.getClientInfo(sessionId);
+            const client = this.sseManager.getClient(sessionId);
             
-            if (clientInfo) {
-                res.json({
-                    success: true,
-                    client: clientInfo
-                });
-            } else {
+            if (!client) {
                 res.status(404).json({
                     success: false,
                     error: 'Client not found',
                     message: '客户端未找到'
                 });
+                return;
             }
+
+            res.json({
+                success: true,
+                data: client,
+                timestamp: Date.now()
+            });
         } catch (error) {
-            console.error('❌ 获取客户端信息API失败:', error);
+            Log.error('❌ 获取客户端信息API失败:', error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to get client info',
@@ -75,9 +82,9 @@ export class ClientsApiController {
      * 断开客户端连接
      * DELETE /api/clients/:sessionId
      */
-    public disconnectClient = (req: Request, res: Response): void => {
+    public disconnectClient = async (req: Request, res: Response): Promise<void> => {
         try {
-            const sessionId = req.params.sessionId;
+            const { sessionId } = req.params;
             
             if (!sessionId) {
                 res.status(400).json({
@@ -88,15 +95,25 @@ export class ClientsApiController {
                 return;
             }
 
-            const success = this.sseManager.disconnectClient(sessionId);
+            const result = this.sseManager.disconnectClient(sessionId);
             
-            res.json({
-                success,
-                sessionId,
-                message: success ? '客户端连接已断开' : '客户端连接不存在或已断开'
-            });
+            if (result) {
+                res.json({
+                    success: true,
+                    message: '客户端连接已断开',
+                    sessionId,
+                    timestamp: Date.now()
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Client not found or already disconnected',
+                    message: '客户端未找到或已断开连接',
+                    sessionId
+                });
+            }
         } catch (error) {
-            console.error('❌ 断开客户端连接API失败:', error);
+            Log.error('❌ 断开客户端连接API失败:', error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to disconnect client',
@@ -106,13 +123,13 @@ export class ClientsApiController {
     };
 
     /**
-     * 向指定客户端发送消息
-     * POST /api/clients/:sessionId/messages
+     * 向客户端发送消息
+     * POST /api/clients/:sessionId/message
      */
-    public sendMessageToClient = (req: Request, res: Response): void => {
+    public sendMessage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const sessionId = req.params.sessionId;
-            const { event = 'message', data } = req.body;
+            const { sessionId } = req.params;
+            const { event, data } = req.body;
             
             if (!sessionId) {
                 res.status(400).json({
@@ -123,25 +140,35 @@ export class ClientsApiController {
                 return;
             }
 
-            if (!data) {
+            if (!event) {
                 res.status(400).json({
                     success: false,
-                    error: 'Missing data field',
-                    message: '缺少data字段'
+                    error: 'Missing event parameter',
+                    message: '缺少event参数'
                 });
                 return;
             }
+
+            const result = this.sseManager.sendMessageToClient(sessionId, event, data);
             
-            const success = this.sseManager.sendMessageToClient(sessionId, event, data);
-            
-            res.json({
-                success,
-                sessionId,
-                event,
-                message: success ? '消息发送成功' : '消息发送失败，客户端可能已断开'
-            });
+            if (result) {
+                res.json({
+                    success: true,
+                    message: '消息发送成功',
+                    sessionId,
+                    event,
+                    timestamp: Date.now()
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Client not found or message send failed',
+                    message: '客户端未找到或消息发送失败',
+                    sessionId
+                });
+            }
         } catch (error) {
-            console.error('❌ 发送消息API失败:', error);
+            Log.error('❌ 发送消息API失败:', error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to send message',
@@ -152,31 +179,32 @@ export class ClientsApiController {
 
     /**
      * 广播消息到所有客户端
-     * POST /api/broadcast
+     * POST /api/clients/broadcast
      */
-    public broadcastMessage = (req: Request, res: Response): void => {
+    public broadcastMessage = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { event = 'message', data } = req.body;
+            const { event, data } = req.body;
             
-            if (!data) {
+            if (!event) {
                 res.status(400).json({
                     success: false,
-                    error: 'Missing data field',
-                    message: '缺少data字段'
+                    error: 'Missing event parameter',
+                    message: '缺少event参数'
                 });
                 return;
             }
-            
+
             const sentCount = this.sseManager.broadcastMessage(event, data);
             
             res.json({
                 success: true,
-                event,
+                message: '广播消息发送完成',
                 sentCount,
-                message: `消息已广播到${sentCount}个客户端`
+                event,
+                timestamp: Date.now()
             });
         } catch (error) {
-            console.error('❌ 广播消息API失败:', error);
+            Log.error('❌ 广播消息API失败:', error);
             res.status(500).json({
                 success: false,
                 error: 'Failed to broadcast message',
@@ -186,26 +214,23 @@ export class ClientsApiController {
     };
 
     /**
-     * 获取客户端连接统计信息
+     * 获取客户端统计信息
      * GET /api/clients/stats
      */
-    public getClientsStats = (req: Request, res: Response): void => {
+    public getStats = async (req: Request, res: Response): Promise<void> => {
         try {
-            const connectionStats = this.sseManager.getConnectionStats();
-            const serverStats = this.sseManager.getServerStats();
-            
+            const stats = this.sseManager.getServerStats();
             res.json({
                 success: true,
-                timestamp: Date.now(),
-                connectionStats,
-                serverStats
+                data: stats,
+                timestamp: Date.now()
             });
         } catch (error) {
-            console.error('❌ 获取客户端统计信息API失败:', error);
+            Log.error('❌ 获取客户端统计信息API失败:', error);
             res.status(500).json({
                 success: false,
-                error: 'Failed to get clients stats',
-                message: '获取客户端统计信息失败'
+                error: 'Failed to get client stats',
+                message: '获取统计信息失败'
             });
         }
     };
@@ -214,70 +239,54 @@ export class ClientsApiController {
      * 批量操作客户端
      * POST /api/clients/batch
      */
-    public batchOperations = (req: Request, res: Response): void => {
+    public batchOperation = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { operation, sessionIds, data } = req.body;
+            const { operation, sessionIds } = req.body;
             
             if (!operation || !Array.isArray(sessionIds)) {
                 res.status(400).json({
                     success: false,
-                    error: 'Invalid request body',
-                    message: '请求体格式错误，需要operation和sessionIds字段'
+                    error: 'Invalid parameters',
+                    message: '无效的参数，需要operation和sessionIds数组'
                 });
                 return;
             }
 
-            let results: any[] = [];
-
+            const results: any[] = [];
+            
             switch (operation) {
                 case 'disconnect':
-                    results = sessionIds.map(sessionId => ({
-                        sessionId,
-                        success: this.sseManager.disconnectClient(sessionId)
-                    }));
-                    break;
-
-                case 'sendMessage':
-                    if (!data) {
-                        res.status(400).json({
-                            success: false,
-                            error: 'Missing data field for sendMessage operation',
-                            message: 'sendMessage操作需要data字段'
-                        });
-                        return;
+                    for (const sessionId of sessionIds) {
+                        const result = this.sseManager.disconnectClient(sessionId);
+                        results.push({ sessionId, success: result });
                     }
-                    results = sessionIds.map(sessionId => ({
-                        sessionId,
-                        success: this.sseManager.sendMessageToClient(sessionId, data.event || 'message', data.payload)
-                    }));
                     break;
-
+                    
                 default:
                     res.status(400).json({
                         success: false,
                         error: 'Unsupported operation',
-                        message: `不支持的操作: ${operation}`
+                        message: '不支持的操作类型'
                     });
                     return;
             }
 
-            const successCount = results.filter(r => r.success).length;
-            
             res.json({
                 success: true,
                 operation,
-                total: sessionIds.length,
-                successCount,
-                results
+                results,
+                timestamp: Date.now()
             });
-
+            
         } catch (error) {
-            console.error('❌ 批量操作API失败:', error);
+            Log.error('❌ 批量操作API失败:', error);
             res.status(500).json({
                 success: false,
-                error: 'Failed to perform batch operation',
+                error: 'Batch operation failed',
                 message: '批量操作失败'
             });
         }
     };
-} 
+}
+
+export default ClientsApiController; 

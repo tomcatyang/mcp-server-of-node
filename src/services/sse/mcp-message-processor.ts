@@ -2,6 +2,8 @@ import SSEConnectHandler from './sse-connect-handler';
 import { MCPMessage } from './sse-message-handler';
 import toolService from '../tools/tool-service';  
 import { SSEServer } from '../../sse-server';
+import { Log } from '../../log';
+
 /**
  * 会话状态接口
  */
@@ -70,7 +72,7 @@ class MCPMessageProcessor {
             const params = message.params || {};
             const { protocolVersion, capabilities, clientInfo } = params;
 
-            console.log(`🔧 初始化会话 [${sessionId}]:`, {
+            Log.info(`🔧 初始化会话 [${sessionId}]:`, {
                 protocolVersion,
                 clientName: clientInfo?.name,
                 clientVersion: clientInfo?.version
@@ -115,7 +117,7 @@ class MCPMessageProcessor {
             return response;
 
         } catch (error) {
-            console.error(`❌ 处理initialize失败 [${sessionId}]:`, error);
+            Log.error(`❌ 处理initialize失败 [${sessionId}]:`, error);
             return this.createErrorResponse(message.id, -32603, `Initialize failed: ${error}`);
         }
     }
@@ -128,7 +130,7 @@ class MCPMessageProcessor {
             const sessionState = this.sessionStates.get(sessionId);
             
             if (!sessionState) {
-                console.error(`❌ 会话状态未找到 [${sessionId}]`);
+                Log.error(`❌ 会话状态未找到 [${sessionId}]`);
                 return null;
             }
 
@@ -136,7 +138,7 @@ class MCPMessageProcessor {
             sessionState.initialized = true;
             this.sessionStates.set(sessionId, sessionState);
 
-            console.log(`✅ 会话初始化完成 [${sessionId}]`);
+            Log.info(`✅ 会话初始化完成 [${sessionId}]`);
 
             // 发送初始化完成事件
             this.sseConnectHandler.sendEventToSession(sessionId, 'initialized', {
@@ -148,7 +150,7 @@ class MCPMessageProcessor {
             return null;
 
         } catch (error) {
-            console.error(`❌ 处理initialized通知失败 [${sessionId}]:`, error);
+            Log.error(`❌ 处理initialized通知失败 [${sessionId}]:`, error);
             return null;
         }
     }
@@ -183,7 +185,7 @@ class MCPMessageProcessor {
         const params = message.params || {};
         const { name, arguments: args } = params;
 
-        console.log(`🔧 调用工具 [${sessionId}]: ${name}`, args);
+        Log.info(`🔧 调用工具 [${sessionId}]: ${name}`, args);
 
         const tool = toolService.getTool(name);
 
@@ -193,7 +195,7 @@ class MCPMessageProcessor {
 
         const result = await tool.handle(args);
 
-        console.log(`🔧 工具执行结果 [${sessionId}]:`, result);
+        Log.info(`🔧 工具执行结果 [${sessionId}]:`, result);
 
         if (!result) {
             return this.createErrorResponse(message.id, -32600, `Tool result not found: ${name}`);
@@ -277,7 +279,7 @@ class MCPMessageProcessor {
      */
     public cleanupSession(sessionId: string): void {
         this.sessionStates.delete(sessionId);
-        console.log(`🗑️ 清理会话状态: ${sessionId}`);
+        Log.info(`🗑️ 清理会话状态: ${sessionId}`);
     }
 
     /**

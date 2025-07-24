@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { Log } from '../../log';
 
 export interface SSESession {
     id: string;
@@ -49,7 +50,7 @@ class SSESessionManager {
             this.removeSession(sessionId);
         });
 
-        console.log(`✅ 创建SSE会话: ${sessionId}, 当前会话数: ${this.sessions.size}`);
+        Log.info(`✅ 创建SSE会话: ${sessionId}, 当前会话数: ${this.sessions.size}`);
         return session;
     }
 
@@ -79,7 +80,7 @@ class SSESessionManager {
                 // 忽略连接已关闭的错误
             }
             this.sessions.delete(sessionId);
-            console.log(`🗑️ 移除SSE会话: ${sessionId}, 剩余会话数: ${this.sessions.size}`);
+            Log.info(`🗑️ 移除SSE会话: ${sessionId}, 剩余会话数: ${this.sessions.size}`);
             
             // 触发会话移除事件
             if (this.onSessionRemoved) {
@@ -119,7 +120,7 @@ class SSESessionManager {
             session.response.write(eventString, 'utf8');
             return true;
         } catch (error) {
-            console.error(`❌ 写入SSE事件失败 [${session.id}]:`, error);
+            Log.error(`❌ 写入SSE事件失败 [${session.id}]:`, error);
             this.removeSession(session.id);
             return false;
         }
@@ -137,7 +138,7 @@ class SSESessionManager {
             session.response.write(rawData, 'utf8');
             return true;
         } catch (error) {
-            console.error(`❌ 写入SSE原始数据失败 [${session.id}]:`, error);
+            Log.error(`❌ 写入SSE原始数据失败 [${session.id}]:`, error);
             this.removeSession(session.id);
             return false;
         }
@@ -230,7 +231,7 @@ class SSESessionManager {
         }
 
         for (const sessionId of expiredSessions) {
-            console.log(`⏰ 会话超时，移除: ${sessionId}`);
+            Log.warn(`⏰ 会话超时，移除: ${sessionId}`);
             this.removeSession(sessionId);
         }
     }
@@ -243,9 +244,9 @@ class SSESessionManager {
         if (activeSessions.length > 0) {
             this.broadcast(this.HEARTBEAT_EVENT, { timestamp: Date.now() }, (sessionId, result) => {
                 if (result) {
-                    // console.log(`💓 发送心跳到会话: ${sessionId} 成功`);
+                    // Log.debug(`💓 发送心跳到会话: ${sessionId} 成功`);
                 } else {
-                    console.warn(`💓 发送心跳到会话: ${sessionId} 失败`);
+                    Log.warn(`💓 发送心跳到会话: ${sessionId} 失败`);
                 }
             });
         }
@@ -266,7 +267,7 @@ class SSESessionManager {
             this.removeSession(sessionId);
         }
 
-        console.log('🛑 SSE会话管理器已停止');
+        Log.info('🛑 SSE会话管理器已停止');
     }
 }
 

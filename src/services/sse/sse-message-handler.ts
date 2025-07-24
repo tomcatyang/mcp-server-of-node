@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { SSEServer } from '../../sse-server';
 import SSEConnectHandler from './sse-connect-handler';
 import MCPMessageProcessor from './mcp-message-processor';
+import { Log } from '../../log';
 
 /**
  * MCP消息接口
@@ -18,143 +19,131 @@ export interface MCPMessage {
 class SSEMessageHandler {
     private sseServer: SSEServer;
     private sseConnectHandler: SSEConnectHandler;
-    private mcpProcessor: MCPMessageProcessor;
+    private mcpMessageProcessor: MCPMessageProcessor;
 
     constructor(sseServer: SSEServer, sseConnectHandler: SSEConnectHandler) {
         this.sseServer = sseServer;
         this.sseConnectHandler = sseConnectHandler;
-        this.mcpProcessor = new MCPMessageProcessor(sseServer, sseConnectHandler);
+        this.mcpMessageProcessor = new MCPMessageProcessor(sseServer, sseConnectHandler);
     }
 
     /**
-     * 处理POST请求到/messages端点
-     * 主要处理MCP协议消息
+     * 处理POST消息请求
      */
-    public onPostMessage(req: Request, res: Response): void {
+    public async onPostMessage(req: Request, res: Response): Promise<void> {
         try {
             const sessionId = req.query.session_id as string;
-            
+            const message = req.body;
+
             if (!sessionId) {
                 res.status(400).json({
-                    error: 'Missing session_id parameter',
-                    message: '缺少session_id参数'
+                    error: 'Missing session_id parameter'
                 });
                 return;
             }
 
             // 验证会话是否存在
-            const sessionManager = this.sseConnectHandler.getSessionManager();
-            const session = sessionManager.getSession(sessionId);
-            
+            const session = this.sseConnectHandler.getSessionManager().getSession(sessionId);
             if (!session) {
                 res.status(404).json({
-                    error: 'Session not found',
-                    message: '会话未找到或已失效'
+                    error: 'Session not found'
                 });
                 return;
             }
 
-            // 处理MCP消息
-            this.processMCPMessage(sessionId, req.body, res);
+            // 立即响应客户端，确认消息已收到
+            res.status(200).json({
+                status: 'received',
+                sessionId,
+                timestamp: Date.now()
+            });
+
+            // 处理MCP消息（异步处理）
+            setImmediate(async () => {
+                await this.processMCPMessage(sessionId, message);
+            });
 
         } catch (error) {
-            console.error('❌ 处理POST消息请求失败:', error);
+            Log.error('❌ 处理POST消息请求失败:', error);
             res.status(500).json({
                 error: 'Internal server error',
-                message: '服务器内部错误'
+                message: '处理消息请求失败'
             });
         }
     }
 
+    /**
+     * 会话移除回调
+     */
     public onSessionRemoved(sessionId: string): void {
-        this.mcpProcessor.cleanupSession(sessionId);
-        console.log(`🔄 会话已移除 [${sessionId}]`);
+        Log.info(`🔄 会话已移除 [${sessionId}]`);
+        // 清理MCP状态
+        this.mcpMessageProcessor.cleanupSession(sessionId);
     }
 
     /**
-     * 处理MCP协议消息
+     * 处理MCP消息
      */
-    private async processMCPMessage(sessionId: string, message: any, res: Response): Promise<void> {
+    private async processMCPMessage(sessionId: string, message: any): Promise<void> {
         try {
-            // 验证JSON-RPC格式
+            // 验证基本的MCP消息格式
             if (!this.isValidMCPMessage(message)) {
-                res.status(400).json({
-                    jsonrpc: "2.0",
-                    id: message.id || null,
-                    error: {
-                        code: -32600,
-                        message: "Invalid Request",
-                        data: "消息不符合JSON-RPC 2.0格式"
-                    }
-                });
+                Log.warn('❌ 无效的MCP消息格式:', message);
                 return;
             }
 
-            console.log(`📥 收到MCP消息 [${sessionId}]:`, {
-                method: message.method,
+            Log.debug(`📥 收到MCP消息 [${sessionId}]:`, {
                 id: message.id,
+                method: message.method,
+                // 不打印完整参数以避免日志过长
                 hasParams: !!message.params
             });
 
-            // 处理消息并获取响应
-            const response = await this.mcpProcessor.processMessage(sessionId, message);
+            // 使用MCP处理器处理消息
+            const response = await this.mcpMessageProcessor.processMessage(sessionId, message);
             
             if (response) {
-                // 有响应的消息（如initialize），直接返回HTTP响应
-                res.json(response);
-                
-                // 同时通过SSE发送给客户端
+                // 通过SSE发送响应
                 this.sseConnectHandler.sendEventToSession(sessionId, 'message', response);
                 
-                console.log(`📤 发送MCP响应 [${sessionId}]:`, {
+                Log.debug(`📤 发送MCP响应 [${sessionId}]:`, {
                     id: response.id,
                     hasResult: !!response.result,
                     hasError: !!response.error
                 });
             } else {
-                // 无响应的消息（如notifications），只返回成功状态
-                res.json({
-                    success: true,
-                    message: '通知已处理'
-                });
-                
-                console.log(`✅ 处理MCP通知 [${sessionId}]: ${message.method}`);
+                // 处理通知消息（无需响应）
+                Log.debug(`✅ 处理MCP通知 [${sessionId}]: ${message.method}`);
             }
 
         } catch (error) {
-            console.error(`❌ 处理MCP消息失败 [${sessionId}]:`, error);
+            Log.error(`❌ 处理MCP消息失败 [${sessionId}]:`, error);
             
+            // 发送错误响应
             const errorResponse = {
-                jsonrpc: "2.0",
+                jsonrpc: '2.0',
                 id: message.id || null,
                 error: {
                     code: -32603,
-                    message: "Internal error",
-                    data: error instanceof Error ? error.message : '内部服务器错误'
+                    message: '内部服务器错误'
                 }
             };
             
-            res.status(500).json(errorResponse);
             this.sseConnectHandler.sendEventToSession(sessionId, 'message', errorResponse);
         }
     }
 
     /**
-     * 验证是否为有效的MCP消息
+     * 验证MCP消息格式
      */
-    private isValidMCPMessage(message: any): message is MCPMessage {
-        console.log('🔍 验证MCP消息:', 'message ', message);
-        return (
-            message &&
-            typeof message === 'object' &&
-            message.jsonrpc === "2.0" &&
-            (
-                // 请求消息
-                (typeof message.method === 'string' && message.method.length > 0) ||
-                // 响应消息
-                (message.hasOwnProperty('result') || message.hasOwnProperty('error'))
-            )
-        );
+    private isValidMCPMessage(message: any): boolean {
+        Log.debug('🔍 验证MCP消息:', { message });
+        
+        // 基本的JSON-RPC 2.0格式检查
+        return message &&
+               typeof message === 'object' &&
+               message.jsonrpc === '2.0' &&
+               (typeof message.method === 'string' || typeof message.id !== 'undefined');
     }
 
     /**
@@ -175,7 +164,7 @@ class SSEMessageHandler {
      * 获取MCP处理器实例
      */
     public getMCPProcessor(): MCPMessageProcessor {
-        return this.mcpProcessor;
+        return this.mcpMessageProcessor;
     }
 }
 

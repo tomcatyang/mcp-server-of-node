@@ -7,6 +7,7 @@ import { ClientsApiRoutes } from './services/sse/api/clients-api-routes';
 import path from 'path';
 import fs from 'fs';
 import { ServerInfo } from './services/tools/tool-type';
+import { Log } from './log';
 
 export class SSEServer {
     private serverInfo: ServerInfo;
@@ -55,15 +56,15 @@ export class SSEServer {
             path.join(process.cwd(), 'node_modules', 'mcp-server-of-node', 'public'),
             path.join(process.cwd(), 'node_modules', 'mcp-server-of-node', 'dist', 'public'),
         ];
-        console.log(`🔍 可能的静态文件路径: ${possiblePaths}`);
+        Log.debug(`🔍 可能的静态文件路径: ${possiblePaths}`);
 
         for (const publicPath of possiblePaths) {
             if (fs.existsSync(publicPath)) {
-                console.log(`🔍 找到静态文件路径: ${publicPath}`);
+                Log.info(`🔍 找到静态文件路径: ${publicPath}`);
                 this.app.use(express.static(publicPath));
                 break;
             }else{
-                console.log(`🔍 未找到静态文件路径: ${publicPath}`);
+                Log.debug(`🔍 未找到静态文件路径: ${publicPath}`);
             }
         }
     }
@@ -97,7 +98,7 @@ export class SSEServer {
                     serverStatus: serverStats
                 });
             } catch (error) {
-                console.error('❌ 获取API文档失败:', error);
+                Log.error('❌ 获取API文档失败:', error);
                 res.status(500).json({
                     success: false,
                     error: 'Failed to get API documentation',
@@ -141,7 +142,7 @@ export class SSEServer {
 
         // 处理所有请求
         this.app.get('*', (req: Request, res: Response) => {
-            console.log(`🔍 处理所有请求: ${req.url}`);
+            Log.debug(`🔍 处理所有请求: ${req.url}`);
             res.sendFile(path.join(__dirname, 'public', 'index.html'));
         });
     }
@@ -151,14 +152,14 @@ export class SSEServer {
             try {
                 const port = this.serverInfo.port;
                 this.server = this.app.listen(port, () => {
-                    console.log(`🌐 SSE服务器在端口 ${port} 上启动`);
-                    console.log(`📡 SSE状态监控: http://localhost:${port}/index.html`);
-                    console.log(`📡 SSE连接端点: http://localhost:${port}/sse`);
-                    console.log(`💬 消息端点: http://localhost:${port}/messages`);
-                    console.log(`👥 客户端API: http://localhost:${port}/api/clients`);
-                    console.log(`📊 API文档: http://localhost:${port}/api/docs`);
-                    console.log(`🔍 健康检查: http://localhost:${port}/health`);
-                    console.log(`🚀 MCP over SSE 服务已就绪`);
+                    Log.info(`🌐 SSE服务器在端口 ${port} 上启动`);
+                    Log.info(`📡 SSE状态监控: http://localhost:${port}/index.html`);
+                    Log.info(`📡 SSE连接端点: http://localhost:${port}/sse`);
+                    Log.info(`💬 消息端点: http://localhost:${port}/messages`);
+                    Log.info(`👥 客户端API: http://localhost:${port}/api/clients`);
+                    Log.info(`📊 API文档: http://localhost:${port}/api/docs`);
+                    Log.info(`🔍 健康检查: http://localhost:${port}/health`);
+                    Log.info(`🚀 MCP over SSE 服务已就绪`);
                     resolve();
                 });
 
@@ -176,7 +177,7 @@ export class SSEServer {
             return new Promise<void>((resolve) => {
                 this.sseConnectHandler.stop();
                 this.server.close(() => {
-                    console.log('🛑 SSE服务器已停止');
+                    Log.info('🛑 SSE服务器已停止');
                     resolve();
                 });
             });

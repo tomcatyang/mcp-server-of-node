@@ -4,6 +4,7 @@ import { MCPServer } from './mcp-server';
 import { SSEServer } from './sse-server';
 import toolService from './services/tools/tool-service';
 import sampleTools from './sample/sample-tool';
+import { Log } from './log';
 
 /**
  * MCP Server of Node 主入口
@@ -34,7 +35,7 @@ async function main() {
  * 支持不同的SSE配置选项
  */
 async function startMCPMode(args: string[]): Promise<void> {
-    console.error('🚀 启动MCP Server of Node...');
+    Log.info('🚀 启动MCP Server of Node...');
 
     const mcpServer = new MCPServer();
 
@@ -46,7 +47,7 @@ async function startMCPMode(args: string[]): Promise<void> {
     try {
         await mcpServer.start();
     } catch (error) {
-        console.error('❌ 启动MCP服务器失败:', error);
+        Log.error('❌ 启动MCP服务器失败:', error);
         process.exit(1);
     }
 }
@@ -67,7 +68,7 @@ function getArgs(args: string[], argsIndex: number): string | null {
  * 用于提供HTTP SSE实时数据推送服务
  */
 async function startSSEMode(args: string[]): Promise<void> {
-    console.log('🌐 启动SSE独立服务器模式...');
+    Log.info('🌐 启动SSE独立服务器模式...');
 
     // 解析端口参数
     let port = 3000;
@@ -78,21 +79,21 @@ async function startSSEMode(args: string[]): Promise<void> {
         if (!isNaN(parsedPort) && parsedPort > 0 && parsedPort < 65536) {
             port = parsedPort;
         } else {
-            console.error('❌ 无效的端口号，使用默认端口 3000');
+            Log.warn('❌ 无效的端口号，使用默认端口 3000');
         }
     }
     // 从环境变量获取参数
     const name = process.env.SSE_SERVER_NAME || 'mcp-server-of-node';
     if(!process.env.SSE_SERVER_NAME){
-        console.error('❌ 未设置SSE_SERVER_NAME环境变量, 使用默认值: mcp-server-of-node');
+        Log.warn('❌ 未设置SSE_SERVER_NAME环境变量, 使用默认值: mcp-server-of-node');
     }
     const version = process.env.SSE_SERVER_VERSION || '1.1.3';
     if(!process.env.SSE_SERVER_VERSION){
-        console.error('❌ 未设置SSE_SERVER_VERSION环境变量, 使用默认值: 1.1.3');
+        Log.warn('❌ 未设置SSE_SERVER_VERSION环境变量, 使用默认值: 1.1.3');
     }
     const description = process.env.SSE_SERVER_DESCRIPTION || 'MCP Server of Node';
     if(!process.env.SSE_SERVER_DESCRIPTION){
-        console.error('❌ 未设置SSE_SERVER_DESCRIPTION环境变量, 使用默认值: MCP Server of Node');
+        Log.warn('❌ 未设置SSE_SERVER_DESCRIPTION环境变量, 使用默认值: MCP Server of Node');
     }
     const sseServer = new SSEServer({name, port, version, description});
 
@@ -104,7 +105,7 @@ async function startSSEMode(args: string[]): Promise<void> {
     try {
         await sseServer.start();
     } catch (error) {
-        console.error('❌ 启动SSE服务器失败:', error);
+        Log.error('❌ 启动SSE服务器失败:', error);
         process.exit(1);
     }
 }
@@ -114,25 +115,25 @@ async function startSSEMode(args: string[]): Promise<void> {
  */
 function setupGracefulShutdown(cleanup: () => void): void {
     process.on('SIGINT', () => {
-        console.error('\n📡 接收到SIGINT信号，正在关闭服务器...');
+        Log.info('\n📡 接收到SIGINT信号，正在关闭服务器...');
         cleanup();
         process.exit(0);
     });
 
     process.on('SIGTERM', () => {
-        console.error('\n📡 接收到SIGTERM信号，正在关闭服务器...');
+        Log.info('\n📡 接收到SIGTERM信号，正在关闭服务器...');
         cleanup();
         process.exit(0);
     });
 
     process.on('uncaughtException', (error) => {
-        console.error('❌ 未捕获的异常:', error);
+        Log.error('❌ 未捕获的异常:', error);
         cleanup();
         process.exit(1);
     });
 
     process.on('unhandledRejection', (reason) => {
-        console.error('❌ 未处理的Promise拒绝:', reason);
+        Log.error('❌ 未处理的Promise拒绝:', reason);
         cleanup();
         process.exit(1);
     });
@@ -142,6 +143,7 @@ function setupGracefulShutdown(cleanup: () => void): void {
  * 显示帮助信息
  */
 function showHelp(): void {
+    // 帮助信息直接输出到stdout，不使用Log
     console.log(`
 MCP Server of Node
 
@@ -191,6 +193,13 @@ export { SSEServer } from './sse-server';
 export { default as toolService } from './services/tools/tool-service';
 export * from './services/tools/tool-type';
 
+// 日志模块导出
+export { 
+    Logger,
+    LogLevel,
+    Log
+} from './log';
+
 
 // CLI功能导出
 export default {
@@ -216,7 +225,7 @@ if (require.main === module) {
 
     // 启动服务器
     main().catch((error) => {
-        console.error('❌ 启动失败:', error);
+        Log.error('❌ 启动失败:', error);
         process.exit(1);
     });
 }

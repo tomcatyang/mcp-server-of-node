@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ClientsApiController } from './clients-api-controller';
+import ClientsApiController from './clients-api-controller';
 import SSEManager from '../sse-manager';
 
 /**
@@ -21,19 +21,17 @@ export class ClientsApiRoutes {
      */
     private setupRoutes(): void {
         // 客户端列表和统计
-        this.router.get('/clients', this.controller.getClientsList);
-        this.router.get('/clients/stats', this.controller.getClientsStats);
-
-        // 特定客户端操作
-        this.router.get('/clients/:sessionId', this.controller.getClientInfo);
+        this.router.get('/clients', this.controller.getClients);
+        this.router.get('/clients/stats', this.controller.getStats);
+        
+        // 客户端操作
+        this.router.get('/clients/:sessionId', this.controller.getClient);
         this.router.delete('/clients/:sessionId', this.controller.disconnectClient);
-        this.router.post('/clients/:sessionId/messages', this.controller.sendMessageToClient);
-
-        // 批量操作
-        this.router.post('/clients/batch', this.controller.batchOperations);
-
-        // 广播消息
-        this.router.post('/broadcast', this.controller.broadcastMessage);
+        this.router.post('/clients/:sessionId/message', this.controller.sendMessage);
+        
+        // 批量操作和广播
+        this.router.post('/clients/broadcast', this.controller.broadcastMessage);
+        this.router.post('/clients/batch', this.controller.batchOperation);
     }
 
     /**

@@ -7,6 +7,7 @@ import {
     McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import McpService from './services/mcp-service';
+import { Log } from './log';
 
 
 export class MCPServer {
@@ -74,7 +75,7 @@ export class MCPServer {
     public async start(): Promise<void> {
         const transport = new StdioServerTransport();
         await this.server.connect(transport);
-        console.error('TAPD MCP服务器已启动');
+        Log.info('MCP服务器已启动');
     }
 
     public stop(): void {

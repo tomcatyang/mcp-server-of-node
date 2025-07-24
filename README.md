@@ -33,6 +33,10 @@ npx mcp-server-of-node --sse //启动http服务，默认端口3000，可--port�
 npx mcp-server-of-node --help
 ```
 
+在MCP协议中：
+stdout 用于JSON-RPC消息传输，必须保持纯净
+stderr 用于日志输出，不会干扰协议通信
+所以当检测到MCP环境时，所有日志都输出到stderr，确保不会破坏MCP协议的JSON格式。
 
 ### 基本用法
 
