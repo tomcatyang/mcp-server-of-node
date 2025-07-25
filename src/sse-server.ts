@@ -19,6 +19,9 @@ export class SSEServer {
     private clientsApiRoutes: ClientsApiRoutes;
 
     constructor({name, port = 3000, version = '1.0.0', description = 'MCP Server of Node'}: ServerInfo) {
+        // 设置非MCP模式
+        Log.setMcpMode(false);
+
         this.app = express();
         this.serverInfo = {name, port, version, description};
         this.setupMiddleware();

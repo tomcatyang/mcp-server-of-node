@@ -4,7 +4,8 @@
 export {
     Logger,
     LogLevel,
-    Log
+    Log,
+    getLogLevel
 } from './logger';
 
 // 默认导出全局日志器

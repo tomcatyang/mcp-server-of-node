@@ -4,7 +4,7 @@ import { MCPServer } from './mcp-server';
 import { SSEServer } from './sse-server';
 import toolService from './services/tools/tool-service';
 import sampleTools from './sample/sample-tool';
-import { Log } from './log';
+import { Log, getLogLevel } from './log';
 
 /**
  * MCP Server of Node 主入口
@@ -159,6 +159,11 @@ MCP Server of Node
 SSE模式选项:
   --port, -p <number>        # 指定SSE服务器端口（默认：3000）
 
+日志选项:
+  --log-file                  # 输出日志到文件 默认不输出到日志文件
+  --log-dir <directory>       # 指定日志目录（默认：./logs）
+  --log-level <level>         # 指定日志级别（默认：INFO） 可选值：DEBUG, INFO, WARN, ERROR
+
 通用选项:
   --help, -h                 # 显示此帮助信息
 
@@ -187,6 +192,35 @@ SSE模式选项:
 `);
 }
 
+function initLog(){
+    // 默认不输出日志文件
+    // 启动参数中设置--log-file=true 输出日志文件
+    const logFile = process.argv.includes('--log-file');
+    if(logFile){
+        Log.setFileOutput(true);
+    }else{
+        Log.setFileOutput(false);
+    }
+    // 设置日志目录
+    const logDir = process.argv.includes('--log-dir');
+    if(logDir){
+        const logDirValue = getArgs(process.argv, process.argv.findIndex(arg => arg === '--log-dir'));
+        if(logDirValue){
+            Log.setLogDirectory(logDirValue);
+        }
+    }
+    // 设置日志级别
+    const logLevel = process.argv.includes('--log-level');
+    if(logLevel){
+        const logLevelValue = getArgs(process.argv, process.argv.findIndex(arg => arg === '--log-level'));
+        if(logLevelValue){
+            Log.setLevel(getLogLevel(logLevelValue));
+        }
+    }
+    
+}
+
+
 // 核心模块导出 - 供其他项目使用
 export { MCPServer } from './mcp-server';
 export { SSEServer } from './sse-server';
@@ -204,8 +238,13 @@ export {
 // CLI功能导出
 export default {
     main,
-    showHelp
+    showHelp,
+    initLog
 }
+
+
+
+
 
 // 检查是否需要显示帮助
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -215,6 +254,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 // 启动服务器，添加例子工具
 if (require.main === module) {
+    // 初始化日志
+    initLog();
+
     // 添加工具
     toolService.addTools(sampleTools);
 
