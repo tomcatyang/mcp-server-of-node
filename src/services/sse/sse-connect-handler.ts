@@ -134,7 +134,7 @@ class SSEConnectHandler {
      * 向指定会话发送事件
      */
     public sendEventToSession(sessionId: string, event: string, data: any): boolean {
-        Log.debug(`📤 发送事件到会话: ${sessionId}, 事件: ${event}, 数据:`, data);
+        Log.debug(`📤 发送事件到会话: ${sessionId}, 事件: ${event}`);
         return this.sessionManager.sendToSession(sessionId, event, data);
     }
 
