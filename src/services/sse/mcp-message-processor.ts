@@ -195,7 +195,7 @@ class MCPMessageProcessor {
 
         const result = await tool.handle(args);
 
-        Log.info(`🔧 工具执行结果 [${sessionId}]:`, result);
+        Log.info(`🔧 工具执行结果 [${sessionId}] isError: ${result.isError}`);
 
         if (!result) {
             return this.createErrorResponse(message.id, -32600, `Tool result not found: ${name}`);
