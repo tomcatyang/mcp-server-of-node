@@ -3,6 +3,9 @@ import { MCPMessage } from './sse-message-handler';
 import toolService from '../tools/tool-service';  
 import { SSEServer } from '../../sse-server';
 import { Log } from '../../log';
+import promptService from '../prompts/prompt-service';
+import resourceService from '../resources/resource-service';
+
 
 /**
  * 会话状态接口
@@ -33,6 +36,8 @@ class MCPMessageProcessor {
      */
     public async processMessage(sessionId: string, message: MCPMessage): Promise<MCPMessage | null> {
         const method = message.method;
+
+        Log.info(`处理MCP消息 [${sessionId}]: ${method}`);
         
         if (!method) {
             // 这是一个响应消息，不是请求
@@ -56,8 +61,15 @@ class MCPMessageProcessor {
             case 'prompts/list':
                 return await this.handlePromptsList(sessionId, message);
                 
+            case 'prompts/get':
+                return await this.handlePromptsRead(sessionId, message);
+                
             case 'resources/list':
                 return await this.handleResourcesList(sessionId, message);
+
+            case 'resources/read':
+                return await this.handleResourcesRead(sessionId, message);
+
                 
             default:
                 return this.createErrorResponse(message.id, -32601, `Method not found: ${method}`);
@@ -218,12 +230,46 @@ class MCPMessageProcessor {
             return this.createErrorResponse(message.id, -32002, "Session not initialized");
         }
 
+        const prompts = promptService.getPromptList();
+
+        Log.info(`获取提示词列表 [${sessionId}]:`, {
+            jsonrpc: "2.0",
+            id: message.id,
+            result: {
+                prompts: prompts
+            }
+        });
+
         return {
             jsonrpc: "2.0",
             id: message.id,
             result: {
-                prompts: []
+                prompts: prompts
             }
+        };
+    }
+
+    private async handlePromptsRead(sessionId: string, message: MCPMessage): Promise<MCPMessage> {
+        Log.info(`获取提示词请求 [${sessionId}]:`,message);
+        if (!this.isSessionInitialized(sessionId)) {
+            return this.createErrorResponse(message.id, -32002, "Session not initialized");
+        }
+
+        const params = message.params || {};
+        const { name, arguments: args } = params;
+
+        const prompt = promptService.getPrompt(name);
+
+        if (!prompt) {
+            return this.createErrorResponse(message.id, -32601, `Prompt not found: ${name}`);
+        }
+
+        const result = await prompt.handle(args);
+
+        return {
+            jsonrpc: "2.0",
+            id: message.id,
+            result
         };
     }
 
@@ -235,12 +281,36 @@ class MCPMessageProcessor {
             return this.createErrorResponse(message.id, -32002, "Session not initialized");
         }
 
+        const resources = resourceService.getResourceList();
+
         return {
             jsonrpc: "2.0",
             id: message.id,
             result: {
-                resources: []
+                resources: resources
             }
+        };
+    }
+
+    private async handleResourcesRead(sessionId: string, message: MCPMessage): Promise<MCPMessage> {
+        if (!this.isSessionInitialized(sessionId)) {
+            return this.createErrorResponse(message.id, -32002, "Session not initialized");
+        }
+
+        const params = message.params || {};
+        const { uri, arguments: args } = params;
+
+        const resource = resourceService.getResource(uri);
+
+        if (!resource) {
+            return this.createErrorResponse(message.id, -32601, `Resource not found: ${uri}`);
+        }
+        const result = await resource.getContent(args);
+        
+        return {
+            jsonrpc: "2.0",
+            id: message.id,
+            result
         };
     }
 

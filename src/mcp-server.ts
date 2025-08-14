@@ -4,11 +4,14 @@ import {
     CallToolRequestSchema,
     ErrorCode,
     ListToolsRequestSchema,
+    ListResourcesRequestSchema,
+    ListPromptsRequestSchema,
+    ReadResourceRequestSchema,
+    GetPromptRequestSchema,
     McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import McpService from './services/mcp-service';
 import { Log } from './log';
-
 
 export class MCPServer {
     private server: Server;
@@ -25,6 +28,10 @@ export class MCPServer {
             {
                 capabilities: {
                     tools: {},
+                    resources: {
+                        subscribe: true,
+                    },
+                    prompts: {},
                 },
             }
         );
@@ -37,10 +44,21 @@ export class MCPServer {
         // 设置工具列表处理器
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
-                tools: [
-                    // TAPD工具
-                    ...this.mcpService.getToolList(),
-                ],
+                tools: this.mcpService.getToolList(),
+            };
+        });
+
+        // 设置资源列表处理器
+        this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+            return {
+                resources: this.mcpService.getResourceList(),
+            };
+        });
+
+        // 设置提示词列表处理器
+        this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+            return {
+                prompts: this.mcpService.getPromptList(),
             };
         });
 
@@ -50,8 +68,7 @@ export class MCPServer {
             const args = request.params.arguments;
 
             try {
-                // TAPD工具处理
-                if (this.mcpService.canHandle(toolName)) {
+                if (this.mcpService.canHandleTool(toolName)) {
                     const result = await this.mcpService.handleTool(toolName, args);
                     return result;
                 }
@@ -65,10 +82,56 @@ export class MCPServer {
                     throw error;
                 }
 
-                // 将其他错误转换为MCP错误
                 throw new McpError(
                     ErrorCode.InternalError,
                     `Tool execution failed: ${error}`
+                );
+            }
+        });
+
+        // 设置资源读取处理器
+        this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+            const uri = request.params.uri;
+            const args = request.params.arguments;
+
+            try {
+                const content = await this.mcpService.getResourceContent(uri, args || {});
+                return content;
+            } catch (error) {
+                if (error instanceof McpError) {
+                    throw error;
+                }
+
+                throw new McpError(
+                    ErrorCode.InternalError,
+                    `Resource read failed: ${error}`
+                );
+            }
+        });
+
+        // 设置提示词调用处理器
+        this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+            const promptName = request.params.name;
+            const args = request.params.arguments;
+
+            try {
+                if (this.mcpService.canHandlePrompt(promptName)) {
+                    const result = await this.mcpService.handlePrompt(promptName, args);
+                    return result;
+                }
+
+                throw new McpError(
+                    ErrorCode.MethodNotFound,
+                    `Unknown prompt: ${promptName}`
+                );
+            } catch (error) {
+                if (error instanceof McpError) {
+                    throw error;
+                }
+
+                throw new McpError(
+                    ErrorCode.InternalError,
+                    `Prompt execution failed: ${error}`
                 );
             }
         });

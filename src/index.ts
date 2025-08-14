@@ -4,6 +4,7 @@ import { MCPServer } from './mcp-server';
 import { SSEServer } from './sse-server';
 import toolService from './services/tools/tool-service';
 import sampleTools from './sample/sample-tool';
+import { registerAllSamples } from './sample/sample-resources-prompts';
 import { Log, getLogLevel } from './log';
 
 /**
@@ -36,6 +37,10 @@ async function main() {
  */
 async function startMCPMode(args: string[]): Promise<void> {
     Log.info('🚀 启动MCP Server of Node...');
+
+    // 注册示例工具、资源和提示词
+    toolService.addTools(sampleTools);
+    registerAllSamples();
 
     const mcpServer = new MCPServer();
 
@@ -225,6 +230,8 @@ function initLog(){
 export { MCPServer } from './mcp-server';
 export { SSEServer } from './sse-server';
 export { default as toolService } from './services/tools/tool-service';
+export { default as resourceService } from './services/resources/resource-service';
+export { default as promptService } from './services/prompts/prompt-service';
 export * from './services/tools/tool-type';
 
 // 日志模块导出

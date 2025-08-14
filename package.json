@@ -1,13 +1,14 @@
 {
   "name": "mcp-server-of-node",
-  "version": "1.1.15",
+  "version": "1.1.16",
   "description": "MCP服务器基础框架 - 支持标准MCP协议和SSE实时通信功能",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "",
   "license": "ISC",
   "bin": {
-    "mcp-server-of-node": "dist/index.js"
+    "mcp-server-of-node": "dist/index.js",
+    "mcp-server-of-node-sample": "dist/sample/sample-index.js"
   },
   "exports": {
     ".": {

@@ -1,6 +1,9 @@
 import toolService from '../services/tools/tool-service';
+import resourceService from '../services/resources/resource-service';
+import promptService from '../services/prompts/prompt-service';
 import indexModule from '../index';
 import sampleTools from './sample-tool';
+import { sampleResources, samplePrompts } from './sample-resources-prompts';
 
 const { main, showHelp} = indexModule;
 
@@ -17,7 +20,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 if (require.main === module) {
     // 添加工具
     toolService.addTools(sampleTools);
-
+    // resourceService.addResources(sampleResources);
+    // promptService.addPrompts(samplePrompts);
 
     // 设置环境变量
     process.env.SSE_SERVER_NAME = 'mcp-server-of-node-sample';
