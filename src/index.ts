@@ -27,7 +27,7 @@ async function main() {
     } else {
         // 默认模式：MCP + SSE管理工具
         // showHelp();
-        console.log(`
+        Log.info(`
         npx 命令 --help                 # 显示此帮助信息（默认）
         `);
     }
