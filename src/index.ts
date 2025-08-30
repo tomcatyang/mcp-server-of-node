@@ -26,7 +26,10 @@ async function main() {
         await startMCPMode(args);
     } else {
         // 默认模式：MCP + SSE管理工具
-        showHelp();
+        // showHelp();
+        console.log(`
+        npx 命令 --help                 # 显示此帮助信息（默认）
+        `);
     }
 }   
 
