@@ -249,16 +249,14 @@ export default {
 
 
 
-
-
-// 检查是否需要显示帮助
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
-    showHelp();
-    process.exit(0);
-}
-
 // 启动服务器，添加例子工具
 if (require.main === module) {
+    // 检查是否需要显示帮助
+    if (process.argv.includes('--help') || process.argv.includes('-h')) {
+        showHelp();
+        process.exit(0);
+    }
+
     // 初始化日志
     initLog();
 
